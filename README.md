@@ -1,40 +1,40 @@
 # 🤖 MockBot
 
-**MockBot** — React ile geliştirilmiş, üç farklı kişilikli karakterle sohbet edebileceğin eğlenceli ve akıllı bir chat simülatörü.
+**MockBot** is a fun and smart chat simulator built with React, featuring three unique characters with distinct personalities.
 
 ![MockBot Preview](src/assets/hero.png)
 
 ---
 
-## ✨ Özellikler
+## ✨ Features
 
-- **3 Benzersiz Karakter**
-  - 🏴‍☠️ **Kaptan Kanca** — Öfkeli, espirili bir korsan
-  - 🤖 **R0-B0T** — Kafası karışık, hatalı bir robot
-  - 🐸 **Kurbağa Pepe** — Sadece emoji ile konuşan sessiz kurbağa
+- **3 Unique Characters**
+  - 🏴‍☠️ **Captain Hook** — An angry and witty pirate
+  - 🤖 **R0-B0T** — A confused and glitchy robot
+  - 🐸 **Pepe the Frog** — A silent frog that only speaks in emojis
 
-- **Akıllı Cevap Motoru**
-  - Matematiksel hesaplamalar (4 işlem, yüzde, KDV, karekök, üs)
-  - Birim dönüşümleri (km/mil, kg/lb, cm/inç, °C/°F)
-  - Gerçek zamanlı saat & tarih sorguları
-  - Matematiksel sabitler (π, e, altın oran)
+- **Smart Response Engine**
+  - Mathematical calculations (basic operations, percentages, VAT, square root, exponents)
+  - Unit conversions (km/miles, kg/lbs, cm/inches, °C/°F)
+  - Real-time clock & date queries
+  - Mathematical constants (π, e, golden ratio)
 
-- **🌍 İki Dil Desteği** — Türkçe ve İngilizce arasında anlık geçiş
+- **🌍 Bilingual Support** — Instant switching between Turkish and English
 
-- **Typewriter Efekti** — Bot cevapları harfi harfine yazılır
+- **Typewriter Effect** — Bot responses are typed out letter by letter
 
-- **Retro Ses Efektleri** — Her karakterin kendine özgü sesi (Web Audio API)
+- **Retro Sound Effects** — Each character has its own unique sound (Web Audio API)
 
-- **Tekrar Algılama** — Aynı mesajı tekrar gönderince karakterler fark eder
+- **Repeat Detection** — Characters notice when you send the same message twice
 
-- **Mobil Uyumlu** — Responsive tasarım, mobilde sidebar menü
+- **Mobile Friendly** — Responsive design with a slide-in sidebar on mobile
 
 ---
 
-## 🛠️ Teknolojiler
+## 🛠️ Tech Stack
 
-| Araç | Versiyon |
-|------|----------|
+| Tool | Version |
+|------|---------|
 | React | 19 |
 | TypeScript | 6 |
 | Vite | 8 |
@@ -43,25 +43,25 @@
 
 ---
 
-## 🚀 Kurulum ve Çalıştırma
+## 🚀 Getting Started
 
 ```bash
-# Bağımlılıkları yükle
+# Install dependencies
 npm install
 
-# Geliştirme sunucusunu başlat
+# Start the development server
 npm run dev
 
-# Production build al
+# Build for production
 npm run build
 
-# Build'i önizle
+# Preview the production build
 npm run preview
 ```
 
 ---
 
-## 📁 Proje Yapısı
+## 📁 Project Structure
 
 ```
 MockBot/
@@ -71,9 +71,9 @@ MockBot/
 ├── src/
 │   ├── assets/
 │   │   └── hero.png
-│   ├── App.tsx        # Tüm uygulama mantığı
-│   ├── index.css      # Global stiller
-│   └── main.tsx       # Uygulama giriş noktası
+│   ├── App.tsx        # All application logic
+│   ├── index.css      # Global styles
+│   └── main.tsx       # App entry point
 ├── index.html
 ├── vite.config.ts
 ├── tsconfig.json
@@ -82,26 +82,26 @@ MockBot/
 
 ---
 
-## 🎮 Kullanım
+## 🎮 How to Use
 
-1. Sol panelden bir karakter seç (Korsan, Robot veya Kurbağa)
-2. Mesaj kutusuna yaz ve **Enter**'a bas ya da gönder butonuna tıkla
-3. Sağ üstteki **TR / EN** butonuyla dil değiştir
-4. Çöp kutusu ikonuyla sohbet geçmişini temizle
+1. Select a character from the left panel (Pirate, Robot or Frog)
+2. Type a message and press **Enter** or click the send button
+3. Switch languages using the **TR / EN** toggle in the top right
+4. Clear the chat history with the trash icon
 
-### 💡 Akıllı Sorgular
+### 💡 Smart Queries
 
-| Sorgu Türü | Örnek |
-|------------|-------|
-| Matematik | `5 + 3 * 2`, `karekök 144`, `2^10` |
-| Yüzde | `200'ün %18'i`, `18% of 200` |
-| KDV | `1000 TL %18 KDV` |
-| Birim | `100 km kaç mil`, `30°C to F` |
-| Saat | `saat kaç`, `what time is it` |
-| Tarih | `bugün hangi gün`, `what's today's date` |
+| Query Type | Example |
+|------------|---------|
+| Math | `5 + 3 * 2`, `sqrt 144`, `2^10` |
+| Percentage | `18% of 200` |
+| VAT | `1000 with 18% vat` |
+| Unit Conversion | `100 km to miles`, `30°C to F` |
+| Time | `what time is it` |
+| Date | `what's today's date`, `what day is it` |
 
 ---
 
-## 📄 Lisans
+## 📄 License
 
-MIT License — dilediğin gibi kullanabilirsin.
+MIT License — feel free to use it however you like.
