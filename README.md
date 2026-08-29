@@ -1,4 +1,4 @@
-# 🤖 MockBot
+# MockBot
 
 **MockBot** is a fun and smart chat simulator built with React, featuring three unique characters with distinct personalities.
 
@@ -6,12 +6,12 @@
 
 ---
 
-## ✨ Features
+## Features
 
 - **3 Unique Characters**
-  - 🏴‍☠️ **Captain Hook** — An angry and witty pirate
-  - 🤖 **R0-B0T** — A confused and glitchy robot
-  - 🐸 **Pepe the Frog** — A silent frog that only speaks in emojis
+  - **Captain Hook** — An angry and witty pirate
+  - **R0-B0T** — A confused and glitchy robot
+  - **Pepe the Frog** — A silent frog that only speaks in emojis
 
 - **Smart Response Engine**
   - Mathematical calculations (basic operations, percentages, VAT, square root, exponents)
@@ -19,7 +19,7 @@
   - Real-time clock & date queries
   - Mathematical constants (π, e, golden ratio)
 
-- **🌍 Bilingual Support** — Instant switching between Turkish and English
+- **Bilingual Support** — Instant switching between Turkish and English
 
 - **Typewriter Effect** — Bot responses are typed out letter by letter
 
@@ -31,19 +31,19 @@
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Tool | Version |
 |------|---------|
-| React | 19 |
 | TypeScript | 6 |
+| React | 19 |
 | Vite | 8 |
 | Tailwind CSS | 4 |
 | oxlint | 1.79 |
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ```bash
 # Install dependencies
@@ -61,7 +61,7 @@ npm run preview
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 MockBot/
@@ -82,14 +82,14 @@ MockBot/
 
 ---
 
-## 🎮 How to Use
+## How to Use
 
 1. Select a character from the left panel (Pirate, Robot or Frog)
 2. Type a message and press **Enter** or click the send button
 3. Switch languages using the **TR / EN** toggle in the top right
 4. Clear the chat history with the trash icon
 
-### 💡 Smart Queries
+### Smart Queries
 
 | Query Type | Example |
 |------------|---------|
@@ -102,6 +102,6 @@ MockBot/
 
 ---
 
-## 📄 License
+## License
 
 MIT License — feel free to use it however you like.
