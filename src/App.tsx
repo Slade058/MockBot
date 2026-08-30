@@ -704,10 +704,10 @@ function TypingIndicator({ char }: { char: Character }) {
       <div className={`w-8 h-8 rounded-full flex items-center justify-center ${char.bgClass} border ${char.borderClass}`}>
         {char.avatar(18)}
       </div>
-      <div className="bg-surface-3 rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1.5">
+      <div className="theme-bg-3 rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1.5">
         {[0, 1, 2].map(i => (
-          <span key={i} className={`w-2 h-2 rounded-full bg-slate-400 inline-block animate-bounce-dot`}
-            style={{ animationDelay: `${i * 0.15}s` }} />
+          <span key={i} className="w-2 h-2 rounded-full inline-block animate-bounce-dot"
+            style={{ animationDelay: `${i * 0.15}s`, backgroundColor: 'var(--text-muted)' }} />
         ))}
       </div>
     </div>
@@ -734,12 +734,16 @@ function TypewriterText({ text, onDone, charId }: { text: string; onDone: () => 
     return () => clearInterval(interval);
   }, [text, charId, onDone]);
 
-  return <><BotText text={displayed} /><span className="inline-block w-0.5 h-4 bg-slate-400 ml-0.5 align-middle" style={{ animation: 'typewriter-cursor 0.6s infinite' }} /></>;
+  return <><BotText text={displayed} /><span className="inline-block w-0.5 h-4 ml-0.5 align-middle" style={{ backgroundColor: 'var(--text-muted)', animation: 'typewriter-cursor 0.6s infinite' }} /></>;
 }
+
+// ─── THEME ───
+type Theme = 'dark' | 'light';
 
 // ─── MAIN APP ───
 export default function App() {
   const [lang, setLang] = useState<Lang>('tr');
+  const [theme, setTheme] = useState<Theme>('dark');
   const [activeChar, setActiveChar] = useState<CharacterId>('pirate');
   const [chatHistories, setChatHistories] = useState<Record<CharacterId, Message[]>>({ pirate: [], robot: [], frog: [] });
   const [input, setInput] = useState('');
@@ -755,6 +759,11 @@ export default function App() {
   const char = CHARACTERS.find(c => c.id === activeChar)!;
   const charName = t.characters[activeChar].name;
   const charTitle = t.characters[activeChar].title;
+
+  // Apply theme to <html> element
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
@@ -798,20 +807,22 @@ export default function App() {
 
   const handleTypeDone = useCallback(() => { setTypingMsgId(null); }, []);
 
+  const isLight = theme === 'light';
+
   return (
-    <div className="h-screen w-screen flex bg-surface-1 text-slate-200 overflow-hidden">
+    <div className="h-screen w-screen flex overflow-hidden theme-bg-1 theme-text transition-colors duration-200">
       {/* Mobile overlay */}
       {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/60 z-30 md:hidden" onClick={() => setSidebarOpen(false)} />
+        <div className="fixed inset-0 z-30 md:hidden theme-overlay" onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed md:static z-40 h-full w-72 bg-surface-2 border-r border-surface-3 flex flex-col transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-        <div className="p-5 border-b border-surface-3">
+      <aside className={`fixed md:static z-40 h-full w-72 theme-bg-2 border-r theme-border flex flex-col transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+        <div className="p-5 border-b theme-border">
           <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent flex items-center gap-2">
             <MockBotLogo size={28} /> MockBot
           </h1>
-          <p className="text-xs text-slate-500 mt-1">{t.appSubtitle}</p>
+          <p className="text-xs theme-text-muted mt-1">{t.appSubtitle}</p>
         </div>
 
         <div className="flex-1 p-3 space-y-2 overflow-y-auto">
@@ -825,21 +836,21 @@ export default function App() {
                 className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 cursor-pointer group
                   ${isActive
                     ? `${c.bgClass} border ${c.borderClass} shadow-lg`
-                    : 'hover:bg-surface-3/60 border border-transparent'}`}
+                    : 'hover:bg-black/5 dark:hover:bg-white/5 border border-transparent'}`}
               >
                 <div className={`w-11 h-11 rounded-full flex items-center justify-center
-                  ${isActive ? `${c.bgClass} border-2 ${c.borderClass}` : 'bg-surface-3 border-2 border-surface-4'}
+                  ${isActive ? `${c.bgClass} border-2 ${c.borderClass}` : 'theme-bg-3 border-2 theme-border'}
                   transition-all duration-200 group-hover:scale-105`}>
                   {c.avatar(26)}
                 </div>
                 <div className="text-left flex-1 min-w-0">
-                  <div className={`font-semibold text-sm truncate ${isActive ? c.textClass : 'text-slate-300'}`}>
+                  <div className={`font-semibold text-sm truncate ${isActive ? c.textClass : 'theme-text'}`}>
                     {cName}
                   </div>
-                  <div className="text-xs text-slate-500 truncate">{cTitle}</div>
+                  <div className="text-xs theme-text-muted truncate">{cTitle}</div>
                 </div>
                 {msgCount > 0 && (
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isActive ? `${c.bgClass} ${c.textClass}` : 'bg-surface-3 text-slate-400'}`}>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isActive ? `${c.bgClass} ${c.textClass}` : 'theme-bg-3 theme-text-sec'}`}>
                     {msgCount}
                   </span>
                 )}
@@ -848,17 +859,17 @@ export default function App() {
           })}
         </div>
 
-        <div className="p-4 border-t border-surface-3">
-          <p className="text-[10px] text-slate-600 text-center">{t.smartEngineActive}</p>
+        <div className="p-4 border-t theme-border">
+          <p className="text-[10px] theme-text-muted text-center">{t.smartEngineActive}</p>
         </div>
       </aside>
 
       {/* Main Chat Area */}
       <main className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="h-16 bg-surface-2/80 backdrop-blur-md border-b border-surface-3 flex items-center justify-between px-4 shrink-0">
+        <header className="h-16 theme-header backdrop-blur-md border-b theme-border flex items-center justify-between px-4 shrink-0">
           <div className="flex items-center gap-3">
-            <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 hover:bg-surface-3 rounded-lg transition-colors">
+            <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 hover:theme-bg-3 rounded-lg transition-colors theme-text">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>
             <div className={`w-9 h-9 rounded-full flex items-center justify-center ${char.bgClass} border ${char.borderClass}`}>
@@ -866,20 +877,56 @@ export default function App() {
             </div>
             <div>
               <h2 className={`font-bold text-sm ${char.textClass}`}>{charName}</h2>
-              <p className="text-[11px] text-slate-500">{charTitle}</p>
+              <p className="text-[11px] theme-text-muted">{charTitle}</p>
             </div>
           </div>
 
-          {/* Right side: lang toggle + clear */}
+          {/* Right side: theme toggle + lang toggle + clear */}
           <div className="flex items-center gap-2">
+
+            {/* Theme Toggle */}
+            <div className="flex items-center theme-bg-3 rounded-lg p-0.5 border theme-border">
+              {/* Light theme button */}
+              <button
+                onClick={() => setTheme('light')}
+                title="Light theme"
+                className={`px-2.5 py-1.5 rounded-md text-xs font-bold transition-all duration-200 flex items-center gap-1.5 ${
+                  isLight
+                    ? 'bg-amber-400 text-amber-900 shadow-sm'
+                    : 'theme-text-sec hover:theme-text'
+                }`}
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <circle cx="12" cy="12" r="4"/>
+                  <path strokeLinecap="round" d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+                </svg>
+                <span className="hidden sm:inline">Light</span>
+              </button>
+              {/* Dark theme button */}
+              <button
+                onClick={() => setTheme('dark')}
+                title="Dark theme"
+                className={`px-2.5 py-1.5 rounded-md text-xs font-bold transition-all duration-200 flex items-center gap-1.5 ${
+                  !isLight
+                    ? 'bg-slate-700 text-slate-100 shadow-sm'
+                    : 'theme-text-sec hover:theme-text'
+                }`}
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                </svg>
+                <span className="hidden sm:inline">Dark</span>
+              </button>
+            </div>
+
             {/* Language Toggle */}
-            <div className="flex items-center bg-surface-3 rounded-lg p-0.5 border border-surface-4">
+            <div className="flex items-center theme-bg-3 rounded-lg p-0.5 border theme-border">
               <button
                 onClick={() => setLang('tr')}
                 className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all duration-200 ${
                   lang === 'tr'
                     ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
+                    : 'theme-text-sec hover:theme-text'
                 }`}
               >
                 🇹🇷 TR
@@ -889,14 +936,16 @@ export default function App() {
                 className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all duration-200 ${
                   lang === 'en'
                     ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
+                    : 'theme-text-sec hover:theme-text'
                 }`}
               >
                 🇬🇧 EN
               </button>
             </div>
+
+            {/* Clear Chat */}
             <button onClick={clearChat} title={t.clearChat}
-              className="p-2 hover:bg-red-500/20 hover:text-red-400 rounded-lg transition-all duration-200 text-slate-500">
+              className="p-2 hover:bg-red-500/20 hover:text-red-400 rounded-lg transition-all duration-200 theme-text-muted">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
             </button>
           </div>
@@ -908,8 +957,8 @@ export default function App() {
             <div className="flex flex-col items-center justify-center h-full text-center animate-fade-in-up">
               <div className="mb-4">{char.avatar(80)}</div>
               <h3 className={`text-lg font-bold ${char.textClass}`}>{charName}</h3>
-              <p className="text-sm text-slate-500 mt-1 max-w-xs">{t.startChat(charTitle)}</p>
-              <p className="text-xs text-slate-600 mt-4">{t.startHint}</p>
+              <p className="text-sm theme-text-sec mt-1 max-w-xs">{t.startChat(charTitle)}</p>
+              <p className="text-xs theme-text-muted mt-4">{t.startHint}</p>
             </div>
           )}
 
@@ -923,7 +972,7 @@ export default function App() {
               <div className={`max-w-[75%] px-4 py-2.5 text-sm leading-relaxed
                 ${msg.sender === 'user'
                   ? 'bg-indigo-600 text-white rounded-2xl rounded-br-sm'
-                  : 'bg-surface-3 text-slate-200 rounded-2xl rounded-bl-sm'}`}
+                  : 'theme-bg-3 theme-text rounded-2xl rounded-bl-sm'}`}
               >
                 {msg.sender === 'bot' && typingMsgId === msg.id
                   ? <TypewriterText text={msg.text} onDone={handleTypeDone} charId={activeChar} />
@@ -937,17 +986,18 @@ export default function App() {
         </div>
 
         {/* Input */}
-        <div className="p-4 bg-surface-2/80 backdrop-blur-md border-t border-surface-3 shrink-0">
+        <div className="p-4 theme-header backdrop-blur-md border-t theme-border shrink-0">
           <div className="flex gap-2 max-w-3xl mx-auto">
             <input ref={inputRef} value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && sendMessage()}
               placeholder={t.inputPlaceholder(charName)}
               disabled={isTyping}
-              className="flex-1 bg-surface-3 border border-surface-4 rounded-xl px-4 py-3 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all disabled:opacity-50"
+              className="flex-1 theme-input rounded-xl px-4 py-3 text-sm outline-none focus:ring-1 focus:ring-indigo-500/40 transition-all disabled:opacity-50 border"
+              style={{ '--tw-ring-color': 'var(--input-focus)' } as React.CSSProperties}
             />
             <button onClick={sendMessage} disabled={isTyping || !input.trim()}
-              className="px-5 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:hover:bg-indigo-600 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer shrink-0">
+              className="px-5 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:hover:bg-indigo-600 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer shrink-0 text-white">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
             </button>
           </div>
