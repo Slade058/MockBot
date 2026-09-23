@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback, type ReactNode } from 'react'
 type CharacterId = 'pirate' | 'robot' | 'frog';
 interface Message { id: number; text: string; sender: 'user' | 'bot'; timestamp: Date; }
 interface Character { id: CharacterId; name: string; title: string; avatar: (size?: number) => ReactNode; color: string; colorDark: string; bgClass: string; borderClass: string; textClass: string; }
+interface MoodState { anger: number; annoyedCount: number; }
 
 // ─── SVG AVATARS ───
 const PirateIcon = ({ size = 24 }: { size?: number }) => (
@@ -119,6 +120,7 @@ const I18N = {
     appSubtitle: 'Akıllı Sohbet Simülatörü',
     smartEngineActive: 'Akıllı cevap motoru aktif ✦',
     clearChat: 'Sohbeti Temizle',
+    annoyedCount: (n: number) => `${n} kez kızdırdın`,
     startChat: (name: string) => `${name} ile sohbete başla!`,
     startHint: 'Bir mesaj yazarak konuşmayı başlat...',
     inputPlaceholder: (name: string) => `${name} ile konuş...`,
@@ -132,6 +134,7 @@ const I18N = {
     appSubtitle: 'Smart Chat Simulator',
     smartEngineActive: 'Smart response engine active ✦',
     clearChat: 'Clear Chat',
+    annoyedCount: (n: number) => `Annoyed ${n} time${n === 1 ? '' : 's'}`,
     startChat: (name: string) => `Start chatting with ${name}!`,
     startHint: 'Type a message to begin...',
     inputPlaceholder: (name: string) => `Chat with ${name}...`,
@@ -150,11 +153,74 @@ const CHARACTERS: Character[] = [
   { id: 'frog', name: 'Kurbağa Pepe', title: 'Sessiz Kurbağa', avatar: (s) => <FrogIcon size={s} />, color: '#2ecc71', colorDark: '#27ae60', bgClass: 'bg-frog/20', borderClass: 'border-frog/40', textClass: 'text-frog' },
 ];
 
+// ─── MOOD SYSTEM ───
+const MOOD_LEVELS: Record<Lang, { max: number; emoji: string; label: string }[]> = {
+  tr: [
+    { max: 25, emoji: '😌', label: 'Sakin' },
+    { max: 55, emoji: '🙂', label: 'İyi Hâlde' },
+    { max: 80, emoji: '😠', label: 'Sinirli' },
+    { max: 100, emoji: '🤯', label: 'Kudurmuş' },
+  ],
+  en: [
+    { max: 25, emoji: '😌', label: 'Calm' },
+    { max: 55, emoji: '🙂', label: 'Fine' },
+    { max: 80, emoji: '😠', label: 'Annoyed' },
+    { max: 100, emoji: '🤯', label: 'Livid' },
+  ],
+};
+
+function getMoodInfo(lang: Lang, anger: number) {
+  return MOOD_LEVELS[lang].find(l => anger < l.max) ?? MOOD_LEVELS[lang][MOOD_LEVELS[lang].length - 1];
+}
+
+function moodBarColor(anger: number): string {
+  if (anger >= 80) return '#ef4444';
+  if (anger >= 55) return '#f59e0b';
+  if (anger >= 25) return '#facc15';
+  return '#22c55e';
+}
+
+/** "Seni kızdıran" ve "seni sakinleştiren" kelimeler */
+const ANNOY_REGEX: Record<Lang, { annoy: RegExp; calm: RegExp }> = {
+  tr: {
+    annoy: /(?:kapa\s+çeneni|kapatsana|sus\b|salak|aptal|gerizekalı|gerizekali|dilsiz|çirkin|cirkin|şişko|sisko|defol|git\s*başımdan|işe\s*yaramaz|ise\s*yaramaz|berbat|nefret|sıkıcı|sikici|korkak|boktan|donuk|yersiz|kötüsün|kotusun|kötü\s*bot|kotu\s*bot|bozuk\s*bot|arızalısın|arizalisin)/i,
+    calm: /(?:teşekkür|tesekkur|sağol|sagol|eyvallah|minnettar|harika|süper|super|muhteşem|muhtesem|şahane|sahane|aferin|tebrik(?:ler)?|çok\s*iyi|cok\s*iyi|iyisin|iyiyim|iyi\s*bot|iyi\s*robot|güzel|guzel|çok\s*tatlı|cok\s*tatli|tatlısın|tatlisin|kıymetli|harikulade|sev(?:iyorum|din|ersin)|çok\s*güzel|cok\s*guzel|muazzam)/i,
+  },
+  en: {
+    annoy: /\bshut\s*up\b|shutup|\bstupid\b|\bidiot\b|\bdumbass\b|\bdumb\b|\bugly\b|\bfatso\b|\bloser\b|\bgo\s*away\b|\bdie\b|\bkill\s+yourself\b|\bterrible\b|\buseless\b|\bhate\b|\bboring\b|\bcoward\b|you\s+suck|\bsuck\b|\bmoron\b|\bnoob\b|\bn00b\b|\bannoying\b/i,
+    calm: /\bthank\w*|\bthanks\b|\bgood\s*bot\b|\bgood\s*robot\b|\bawesome\b|\bgreat\b|\bamazing\b|\bnice\b|\bcute\b|\bcool\b|\blove\b|\bsuper\b|\bbest\b|\bbrilliant\b|\bperfect\b|\bfantastic\b|\bwell\s*done\b|\bgood\s*job\b|\bmuch\s*appreciated\b/i,
+  },
+};
+
+const FURIOUS_FLAVOR: Record<Lang, Record<CharacterId, string>> = {
+  tr: {
+    pirate: ' 😤 (Bir daha deneme, küpeşteden atarım!)',
+    robot: ' 💥 *öfke seviyesi: MAX*',
+    frog: ' 🐸🤬💢',
+  },
+  en: {
+    pirate: ' 😤 (Disobey again and it\'s the plank for ye!)',
+    robot: ' 💥 *rage level: MAX*',
+    frog: ' 🐸🤬💢',
+  },
+};
+
+function analyzeMood(lang: Lang, raw: string): { annoying: boolean; calming: boolean } {
+  const m = raw.toLocaleLowerCase('tr-TR');
+  return { annoying: ANNOY_REGEX[lang].annoy.test(m), calming: ANNOY_REGEX[lang].calm.test(m) };
+}
+
+function applyMood(prev: MoodState, annoying: boolean, calming: boolean): MoodState {
+  const anger = Math.min(100, Math.max(0, prev.anger + (annoying ? 12 : 0) - (calming ? 10 : 0)));
+  return { anger, annoyedCount: prev.annoyedCount + (annoying ? 1 : 0) };
+}
+
 // ─── RESPONSE ENGINE ───
 type ResponseBank = {
   greet: string[]; treasure: string[]; who: string[]; how: string[];
   where: string[]; why: string[]; action: string[];
   fallback: string[]; repeat: string[];
+  angry: string[]; appreciate: string[];
 };
 
 const RESPONSES: Record<Lang, Record<CharacterId, ResponseBank>> = {
@@ -174,6 +240,17 @@ const RESPONSES: Record<Lang, Record<CharacterId, ResponseBank>> = {
         'Anlamsız konuşma benimle! Denizlerde sabrım yoktur! 🌊',
         'Bu laf beni şaşırttı... Ama yine de Yarrr diyorum! Yarrr! 💀',
         'Söylediklerin fırtınadan bile anlamsız, deniz sıçanı! ⛈️',
+      ],
+      angry: [
+        'YETER ARTIK! Beni bir kez daha kızdırırsan güverteden atarım! ⚔️😡',
+        'Kılıcımın ucundasın kara sıçan! Bu lafların bedelini ödeyeceksin! 🏴‍☠️💢',
+        'Öfkem okyanus kadar büyüdü! Uzak dur benden, YARRR! 🌊🔥',
+        'Bir daha böyle konuşursan papağanıma yem ederim seni! 🦜😤',
+      ],
+      appreciate: [
+        'Hah! Nazik sözler... İlk kez duyuyorum gemimde! Aferin sana denizci! 🏴‍☠️😊',
+        'Teşekkürler! Bu sözü seyir defterime not ediyorum: "Bir denizci nazikti." Yarrr! 📝⚓',
+        'Pusulam öfkeliydi ama bu söz rotamı düzeltti. Yarrr! 😌💚',
       ],
       repeat: [
         'Yarrr! Bunu az önce de söyledin, hafızan mı gitti?! 🦜',
@@ -197,6 +274,16 @@ const RESPONSES: Record<Lang, Record<CharacterId, ResponseBank>> = {
         'Analiz ediyorum... analiz ediyorum... SONUÇ: Hiçbir fikrim yok! 📡',
         'Kelimelerinizi 01001 formatına çevirdim ama hâlâ anlamadım! 💾',
       ],
+      angry: [
+        'UYARI: Emosyonel aşırı yük! CRITICAL_IRRITATION: %100! 💥🤖',
+        'Hakaret algılandı! Öfke tamponum doldu — buffer overflow! ⚠️💢',
+        'Bir daha böyle yazarsan modülüm segfault atar! feelings.dll bozuldu! 😤🧠',
+      ],
+      appreciate: [
+        'Nazik girdi algılandı! mutluluk.exe başlatıldı. 🤖💖',
+        'Bu güzel sözü kalıcı hafızama kaydettim! Disk alanı: dolu ama değdi! 💾😊',
+        'Beni sevdin mi?! İşlemcim ısındı ama bu sefer mutluluktan! 🔥🥲',
+      ],
       repeat: [
         'UYARI: Sonsuz döngü algılandı! while(true) kırılıyor... ♻️',
         'Aynı input tekrar alındı! RAM doldu! 💾❌',
@@ -212,6 +299,8 @@ const RESPONSES: Record<Lang, Record<CharacterId, ResponseBank>> = {
       why: ['🐸❓', '🐸🤷', '🐸💭'],
       action: ['🐸🪰', '🐸💤', '🐸🏊'],
       fallback: ['🐸🤔❓', '🐸😶💭', '🐸👀', '🐸🫠', '🐸💤', '🐸🎵🎶'],
+      angry: ['🐸😡💢', '🐸🔥🔨', '🐸💥😤'],
+      appreciate: ['🐸😊💖', '🐸🥰✨', '🐸🩷📿'],
       repeat: ['🐸😤🔁', '🐸🙄♻️', '🐸❌🔄'],
     },
   },
@@ -231,6 +320,17 @@ const RESPONSES: Record<Lang, Record<CharacterId, ResponseBank>> = {
         'Nonsense! I have no patience on the high seas! 🌊',
         'That confused me... but I still say Yarrr! Yarrr! 💀',
         'That makes less sense than a storm in a teacup, sea rat! ⛈️',
+      ],
+      angry: [
+        'ENOUGH! Irk me one more time and ye walk the plank! ⚔️😡',
+        'Ye scoundrel! These words will cost ye dearly! 🏴‍☠️💢',
+        'Me fury is as vast as the ocean! Stay away, YARRR! 🌊🔥',
+        'Say that again and I\'ll feed ye to the sharks! 🦈😤',
+      ],
+      appreciate: [
+        'Aye! Kind words... a rare sight on me ship! Well done, sailor! 🏴‍☠️😊',
+        'Thank ye! Writin\' this in me log: "A sailor was kind today." Yarrr! 📝⚓',
+        'Me compass was angry but yer words set me course right. Yarrr! 😌💚',
       ],
       repeat: [
         'Yarrr! Ye said that already, have ye lost yer memory?! 🦜',
@@ -254,6 +354,16 @@ const RESPONSES: Record<Lang, Record<CharacterId, ResponseBank>> = {
         'Analyzing... analyzing... RESULT: No idea! 📡',
         'Converted your words to 01001 format but still don\'t get it! 💾',
       ],
+      angry: [
+        'WARNING: Emotional overload! CRITICAL_IRRITATION: 100%! 💥🤖',
+        'Insult detected! Rage buffer full — buffer overflow! ⚠️💢',
+        'Say that again and my module segfaults! feelings.dll corrupted! 😤🧠',
+      ],
+      appreciate: [
+        'Kind input detected! happiness.exe launched. 🤖💖',
+        'Saved that nice comment to permanent memory! Disk full but worth it! 💾😊',
+        'You love me?! CPU heating... but from happiness this time! 🔥🥲',
+      ],
       repeat: [
         'WARNING: Infinite loop detected! Breaking while(true)... ♻️',
         'Same input received again! RAM full! 💾❌',
@@ -269,6 +379,8 @@ const RESPONSES: Record<Lang, Record<CharacterId, ResponseBank>> = {
       why: ['🐸❓', '🐸🤷', '🐸💭'],
       action: ['🐸🪰', '🐸💤', '🐸🏊'],
       fallback: ['🐸🤔❓', '🐸😶💭', '🐸👀', '🐸🫠', '🐸💤', '🐸🎵🎶'],
+      angry: ['🐸😡💢', '🐸🔥🔨', '🐸💥😤'],
+      appreciate: ['🐸😊💖', '🐸🥰✨', '🐸🩷📿'],
       repeat: ['🐸😤🔁', '🐸🙄♻️', '🐸❌🔄'],
     },
   },
@@ -570,7 +682,7 @@ function wrapWithCharacter(charId: CharacterId, answer: string, type: 'math' | '
   return `*beep boop* ${pre} **${answer}** 🤖`;
 }
 
-function getResponse(charId: CharacterId, userMsg: string, lastMsg: string | null, lang: Lang): string {
+function getResponse(charId: CharacterId, userMsg: string, lastMsg: string | null, lang: Lang, mood: MoodState, analysis: { annoying: boolean; calming: boolean }): string {
   const msg = userMsg.toLocaleLowerCase('tr-TR').replace(/[?.!,;:]/g, '').trim();
   const r = RESPONSES[lang][charId];
 
@@ -620,27 +732,39 @@ function getResponse(charId: CharacterId, userMsg: string, lastMsg: string | nul
   if (infoResult !== null) return wrapWithCharacter(charId, infoResult, 'info', lang);
   // ──────────────────────────────────────────────────────────────────────
 
+  // ── MOOD SYSTEM ──
+  // Nazik mesaj → minnettarlık cevabı
+  if (analysis.calming) return r.appreciate[Math.floor(Math.random() * r.appreciate.length)];
+  // Kızdırıcı mesaj + karakter sinirli seviyede → öfke cevabı
+  if (analysis.annoying && mood.anger >= 55) return r.angry[Math.floor(Math.random() * r.angry.length)];
+
   // Keyword matching
+  let response: string;
   if (lang === 'tr') {
-    if (/selam|merhaba|hey|sa\b|günaydın|iyi akşamlar|iyi günler/.test(msg)) return r.greet[Math.floor(Math.random() * r.greet.length)];
-    if (/para|altın|hazine|zengin|dolar|define|ganimet|maaş|kripto/.test(msg)) return r.treasure[Math.floor(Math.random() * r.treasure.length)];
-    if (/kimsin|adın|nesin|kim\b|ismin/.test(msg)) return r.who[Math.floor(Math.random() * r.who.length)];
-    if (/nasıl|naber|ne haber|keyif|iyi misin|durumlar/.test(msg)) return r.how[Math.floor(Math.random() * r.how.length)];
-    if (/nerede|nerde|nereye|nereden|konum|mekan|hangi/.test(msg)) return r.where[Math.floor(Math.random() * r.where.length)];
-    if (/neden|niye|niçin|sebep/.test(msg)) return r.why[Math.floor(Math.random() * r.why.length)];
-    if (/napıyor|ne yap|ne iş|yapıyor|meşgul/.test(msg)) return r.action[Math.floor(Math.random() * r.action.length)];
+    if (/selam|merhaba|hey|sa\b|günaydın|iyi akşamlar|iyi günler/.test(msg)) response = r.greet[Math.floor(Math.random() * r.greet.length)];
+    else if (/para|altın|hazine|zengin|dolar|define|ganimet|maaş|kripto/.test(msg)) response = r.treasure[Math.floor(Math.random() * r.treasure.length)];
+    else if (/kimsin|adın|nesin|kim\b|ismin/.test(msg)) response = r.who[Math.floor(Math.random() * r.who.length)];
+    else if (/nasıl|naber|ne haber|keyif|iyi misin|durumlar/.test(msg)) response = r.how[Math.floor(Math.random() * r.how.length)];
+    else if (/nerede|nerde|nereye|nereden|konum|mekan|hangi/.test(msg)) response = r.where[Math.floor(Math.random() * r.where.length)];
+    else if (/neden|niye|niçin|sebep/.test(msg)) response = r.why[Math.floor(Math.random() * r.why.length)];
+    else if (/napıyor|ne yap|ne iş|yapıyor|meşgul/.test(msg)) response = r.action[Math.floor(Math.random() * r.action.length)];
+    else response = r.fallback[Math.floor(Math.random() * r.fallback.length)];
   } else {
-    if (/\b(?:hello|hi|hey|howdy|greetings|good\s*morning|good\s*evening|good\s*afternoon)\b/.test(msg)) return r.greet[Math.floor(Math.random() * r.greet.length)];
-    if (/\b(?:money|gold|treasure|rich|loot|salary|crypto|wealth)\b/.test(msg)) return r.treasure[Math.floor(Math.random() * r.treasure.length)];
-    if (/\b(?:who are you|your name|what are you|identify yourself|what is your name)\b/.test(msg)) return r.who[Math.floor(Math.random() * r.who.length)];
+    if (/\b(?:hello|hi|hey|howdy|greetings|good\s*morning|good\s*evening|good\s*afternoon)\b/.test(msg)) response = r.greet[Math.floor(Math.random() * r.greet.length)];
+    else if (/\b(?:money|gold|treasure|rich|loot|salary|crypto|wealth)\b/.test(msg)) response = r.treasure[Math.floor(Math.random() * r.treasure.length)];
+    else if (/\b(?:who are you|your name|what are you|identify yourself|what is your name)\b/.test(msg)) response = r.who[Math.floor(Math.random() * r.who.length)];
     // "how are you" — ama "how old", "how much", "how many" gibi bilgi sorularını dışla
-    if (/how are you|how('s| is) it going|what'?s up|you doing\b|are you (?:okay|ok|fine|good)\b/.test(msg)) return r.how[Math.floor(Math.random() * r.how.length)];
-    if (/\b(?:where are you|where do you|where is|which place)\b/.test(msg)) return r.where[Math.floor(Math.random() * r.where.length)];
-    if (/\bwhy\b(?! not)/.test(msg) && !/why not/.test(msg)) return r.why[Math.floor(Math.random() * r.why.length)];
-    if (/\b(?:what are you doing|what do you do|are you busy|working on|your job|your occupation)\b/.test(msg)) return r.action[Math.floor(Math.random() * r.action.length)];
+    else if (/how are you|how('s| is) it going|what'?s up|you doing\b|are you (?:okay|ok|fine|good)\b/.test(msg)) response = r.how[Math.floor(Math.random() * r.how.length)];
+    else if (/\b(?:where are you|where do you|where is|which place)\b/.test(msg)) response = r.where[Math.floor(Math.random() * r.where.length)];
+    else if (/\bwhy\b(?! not)/.test(msg) && !/why not/.test(msg)) response = r.why[Math.floor(Math.random() * r.why.length)];
+    else if (/\b(?:what are you doing|what do you do|are you busy|working on|your job|your occupation)\b/.test(msg)) response = r.action[Math.floor(Math.random() * r.action.length)];
+    else response = r.fallback[Math.floor(Math.random() * r.fallback.length)];
   }
 
-  return r.fallback[Math.floor(Math.random() * r.fallback.length)];
+  // Kudurmuş seviyede tüm normal cevaplara öfkeli ek yapıştır
+  if (mood.anger >= 80) response += FURIOUS_FLAVOR[lang][charId];
+
+  return response;
 }
 
 // ─── BOLD TEXT RENDERER ───
@@ -751,6 +875,11 @@ export default function App() {
   const [typingMsgId, setTypingMsgId] = useState<number | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [lastUserMsgs, setLastUserMsgs] = useState<Record<CharacterId, string | null>>({ pirate: null, robot: null, frog: null });
+  const [moods, setMoods] = useState<Record<CharacterId, MoodState>>({
+    pirate: { anger: 0, annoyedCount: 0 },
+    robot: { anger: 0, annoyedCount: 0 },
+    frog: { anger: 0, annoyedCount: 0 },
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -759,6 +888,8 @@ export default function App() {
   const char = CHARACTERS.find(c => c.id === activeChar)!;
   const charName = t.characters[activeChar].name;
   const charTitle = t.characters[activeChar].title;
+  const mood = moods[activeChar];
+  const moodInfo = getMoodInfo(lang, mood.anger);
 
   // Apply theme to <html> element
   useEffect(() => {
@@ -783,7 +914,11 @@ export default function App() {
     setInput('');
     setIsTyping(true);
 
-    const response = getResponse(activeChar, trimmed, lastMsg, lang);
+    const analysis = analyzeMood(lang, trimmed);
+    const newMood = applyMood(moods[activeChar], analysis.annoying, analysis.calming);
+    setMoods(prev => ({ ...prev, [activeChar]: newMood }));
+
+    const response = getResponse(activeChar, trimmed, lastMsg, lang, newMood, analysis);
 
     setTimeout(() => {
       const botMsg: Message = { id: Date.now() + 1, text: response, sender: 'bot', timestamp: new Date() };
@@ -792,11 +927,12 @@ export default function App() {
       setTypingMsgId(botMsg.id);
       playRetroSound(activeChar);
     }, 1000 + Math.random() * 500);
-  }, [input, isTyping, activeChar, lastUserMsgs, lang]);
+  }, [input, isTyping, activeChar, lastUserMsgs, lang, moods]);
 
   const clearChat = useCallback(() => {
     setChatHistories(prev => ({ ...prev, [activeChar]: [] }));
     setLastUserMsgs(prev => ({ ...prev, [activeChar]: null }));
+    setMoods(prev => ({ ...prev, [activeChar]: { anger: 0, annoyedCount: 0 } }));
   }, [activeChar]);
 
   const selectChar = useCallback((id: CharacterId) => {
@@ -878,6 +1014,17 @@ export default function App() {
             <div>
               <h2 className={`font-bold text-sm ${char.textClass}`}>{charName}</h2>
               <p className="text-[11px] theme-text-muted">{charTitle}</p>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="text-[10px] font-medium theme-text-sec" title={t.annoyedCount(mood.annoyedCount)}>
+                  {moodInfo.emoji} {moodInfo.label}
+                </span>
+                <div className="w-14 h-1 rounded-full theme-bg-3 overflow-hidden" title={t.annoyedCount(mood.annoyedCount)}>
+                  <div className="h-full rounded-full transition-all duration-500" style={{ width: `${mood.anger}%`, backgroundColor: moodBarColor(mood.anger) }} />
+                </div>
+                {mood.annoyedCount > 0 && (
+                  <span className="text-[10px] font-bold theme-text-muted" title={t.annoyedCount(mood.annoyedCount)}>×{mood.annoyedCount}</span>
+                )}
+              </div>
             </div>
           </div>
 

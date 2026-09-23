@@ -25,6 +25,8 @@
 
 - **Retro Sound Effects** — Each character has its own unique sound (Web Audio API)
 
+- **Character Mood System** — Annoy characters (insults) or calm them down (compliments) and watch their mood shift from Calm to Livid. A mood meter tracks each character's anger and how many times you've annoyed them (+1 per rude message). Available in both Turkish and English.
+
 - **Repeat Detection** — Characters notice when you send the same message twice
 
 - **Mobile Friendly** — Responsive design with a slide-in sidebar on mobile
